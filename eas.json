@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 10.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+      }
+    },
+    "production": {
+      "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+      }
+    }
+  }
+}
