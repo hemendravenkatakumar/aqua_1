@@ -2,8 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Default development URL (standard Django port on machine)
-// Change this to your computer's local network IP (e.g. 'http://192.168.1.100:8000/api') to test on physical device!
-let BACKEND_IP = '192.168.1.7'; // Fallback / placeholder IP
+let BACKEND_IP = '192.168.1.7'; 
 let BASE_URL = `http://${BACKEND_IP}:8000/api`;
 
 const client = axios.create({
@@ -29,12 +28,27 @@ client.interceptors.request.use(
   }
 );
 
+// Helper function to format input IP or Domain into a clean Base API URL
+const formatBaseURL = (input) => {
+  if (!input) return BASE_URL;
+  const clean = input.trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean.endsWith('/') ? `${clean}api` : `${clean}/api`;
+  }
+  // Check if it looks like a domain name (contains . and no port)
+  if (clean.includes('.') && !clean.includes(':') && isNaN(clean.replace(/\./g, ''))) {
+    return `https://${clean}/api`;
+  }
+  // Fallback to local development port
+  return `http://${clean}:8000/api`;
+};
+
 // Method to set backend IP dynamically
 export const setBackendIP = async (ip) => {
   if (!ip) return;
-  const cleanIp = ip.trim();
-  await AsyncStorage.setItem('backend_ip', cleanIp);
-  client.defaults.baseURL = `http://${cleanIp}:8000/api`;
+  const targetUrl = formatBaseURL(ip);
+  await AsyncStorage.setItem('backend_ip', ip.trim());
+  client.defaults.baseURL = targetUrl;
   return client.defaults.baseURL;
 };
 
@@ -43,7 +57,7 @@ export const initClientURL = async () => {
   try {
     const savedIp = await AsyncStorage.getItem('backend_ip');
     if (savedIp) {
-      client.defaults.baseURL = `http://${savedIp}:8000/api`;
+      client.defaults.baseURL = formatBaseURL(savedIp);
     }
   } catch (e) {
     console.log('Error initializing client URL', e);
@@ -52,3 +66,4 @@ export const initClientURL = async () => {
 };
 
 export default client;
+
