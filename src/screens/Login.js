@@ -11,16 +11,12 @@ export default function Login({ navigation }) {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [codeSent, setCodeSent] = useState(false);
-  const [ipAddress, setIpAddress] = useState('192.168.1.7'); // Default placeholder IP
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(null);
 
   useEffect(() => {
     AsyncStorage.getItem('user_lang').then(savedLang => {
       if (savedLang) setLang(savedLang);
-    });
-    AsyncStorage.getItem('backend_ip').then(savedIp => {
-      if (savedIp) setIpAddress(savedIp);
     });
   }, []);
 
@@ -32,7 +28,6 @@ export default function Login({ navigation }) {
     
     setLoading(true);
     try {
-      await setBackendIP(ipAddress);
       
       if (!auth) {
         throw new Error("Native auth module not found in Expo Go");
@@ -116,19 +111,7 @@ export default function Login({ navigation }) {
         </View>
 
         <View style={styles.form}>
-          {/* Server Config (crucial for local testing between phone/backend) */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>🔧 Django Backend IP (WiFi Local IP)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 192.168.1.5"
-              value={ipAddress}
-              onChangeText={setIpAddress}
-            />
-            <Text style={styles.helperText}>
-              Your computer's IP address on your home WiFi network.
-            </Text>
-          </View>
+
 
           {!codeSent ? (
             <View style={styles.inputGroup}>
