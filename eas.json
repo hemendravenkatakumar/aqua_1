@@ -7,20 +7,20 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+        "image": "latest"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+        "image": "latest"
       }
     },
     "production": {
       "android": {
         "buildType": "apk",
-        "image": "ubuntu-24.04-jdk-17-ndk-r27b"
+        "image": "latest"
       }
     }
   }
