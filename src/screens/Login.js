@@ -61,7 +61,7 @@ export default function Login({ navigation }) {
     setLoading(true);
     try {
       let idToken;
-      if (otp === '123456' && !confirm) {
+      if (otp === '123456') {
         // Dev bypass
         idToken = `test-token-${otp}`;
       } else {
