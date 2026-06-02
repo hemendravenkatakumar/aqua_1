@@ -51,7 +51,7 @@ export default function Farmer({ navigation }) {
             await AsyncStorage.removeItem('profile_setup');
             navigation.reset({
               index: 0,
-              routes: [{ name: 'Login' }],
+              routes: [{ name: 'Role' }],
             });
           } catch (e) {
             console.log('Error logging out', e);

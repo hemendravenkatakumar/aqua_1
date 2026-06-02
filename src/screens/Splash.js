@@ -25,8 +25,10 @@ export default function Splash({ navigation }) {
             navigation.replace('Signup');
           }
         } else {
-          if (role) {
-            navigation.replace('Login');
+          // If they already set the language, go to Role Selection
+          const savedLang = await AsyncStorage.getItem('user_lang');
+          if (savedLang) {
+            navigation.replace('Role');
           } else {
             navigation.replace('Lang');
           }

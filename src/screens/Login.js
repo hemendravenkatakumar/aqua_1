@@ -13,10 +13,14 @@ export default function Login({ navigation }) {
   const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(null);
+  const [role, setRole] = useState('farmer');
 
   useEffect(() => {
     AsyncStorage.getItem('user_lang').then(savedLang => {
       if (savedLang) setLang(savedLang);
+    });
+    AsyncStorage.getItem('user_role').then(savedRole => {
+      if (savedRole) setRole(savedRole);
     });
   }, []);
 
@@ -113,8 +117,8 @@ export default function Login({ navigation }) {
     >
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.topSection}>
-          <Text style={styles.emoji}>🔐</Text>
-          <Text style={styles.title}>{t.login}</Text>
+          <Text style={styles.emoji}>{role === 'farmer' ? '👨‍🌾' : '🚛'}</Text>
+          <Text style={styles.title}>{(role === 'farmer' ? t.farmer : t.buyer) + " " + t.login}</Text>
           <Text style={styles.subtitle}>Firebase Secure Authentication</Text>
         </View>
 
