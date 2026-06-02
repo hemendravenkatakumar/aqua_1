@@ -11,6 +11,9 @@ export default function Profile({ visible, onClose, user, onSave, onLogout }) {
   const [exp, setExp] = useState(user?.exp || '');
   const [ipAddress, setIpAddress] = useState('');
   const [saving, setSaving] = useState(false);
+  const [lang, setLang] = useState('en');
+  const [autoTare, setAutoTare] = useState(true);
+  const [soundAlert, setSoundAlert] = useState(true);
 
   React.useEffect(() => {
     if (user) {
@@ -22,6 +25,10 @@ export default function Profile({ visible, onClose, user, onSave, onLogout }) {
     AsyncStorage.getItem('backend_ip').then(savedIp => {
       if (savedIp) setIpAddress(savedIp);
     });
+    // Load settings
+    AsyncStorage.getItem('user_lang').then(val => { if (val) setLang(val); });
+    AsyncStorage.getItem('app_auto_tare').then(val => { setAutoTare(val !== 'false'); });
+    AsyncStorage.getItem('app_sound_alert').then(val => { setSoundAlert(val !== 'false'); });
   }, [user, visible]);
 
   const handleSave = async () => {
@@ -32,13 +39,19 @@ export default function Profile({ visible, onClose, user, onSave, onLogout }) {
         await setBackendIP(ipAddress);
       }
       
+      // Save settings
+      await AsyncStorage.setItem('user_lang', lang);
+      await AsyncStorage.setItem('app_auto_tare', autoTare ? 'true' : 'false');
+      await AsyncStorage.setItem('app_sound_alert', soundAlert ? 'true' : 'false');
+      
       const res = await client.put('/me/', {
         name,
         loc,
         exp,
+        lang,
       });
       onSave(res.data);
-      Alert.alert('Success', 'Profile saved successfully!');
+      Alert.alert('Success', 'Settings saved successfully!');
       onClose();
     } catch (e) {
       console.log('Error updating profile', e);
@@ -98,6 +111,51 @@ export default function Profile({ visible, onClose, user, onSave, onLogout }) {
                 onChangeText={setExp}
                 keyboardType="numeric"
               />
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Language Selection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Language / భాష / भाषा</Text>
+              <View style={styles.langRow}>
+                {[{code:'en', label:'English'}, {code:'te', label:'తెలుగు'}, {code:'hi', label:'हिंदी'}].map(item => (
+                  <TouchableOpacity
+                    key={item.code}
+                    style={[styles.langBtn, lang === item.code && styles.activeLangBtn]}
+                    onPress={() => setLang(item.code)}
+                  >
+                    <Text style={[styles.langBtnTxt, lang === item.code && styles.activeLangBtnTxt]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Weighing Scale App Use Settings */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>App Use Settings</Text>
+              <View style={styles.settingToggleRow}>
+                <Text style={styles.settingToggleLabel}>Auto-Tare Weighing Scale</Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[styles.toggleSwitch, autoTare ? styles.toggleOn : styles.toggleOff]}
+                  onPress={() => setAutoTare(!autoTare)}
+                >
+                  <View style={[styles.toggleThumb, autoTare ? styles.thumbOn : styles.thumbOff]} />
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.settingToggleRow, { marginTop: 10 }]}>
+                <Text style={styles.settingToggleLabel}>Sound Beep on Bag Added</Text>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[styles.toggleSwitch, soundAlert ? styles.toggleOn : styles.toggleOff]}
+                  onPress={() => setSoundAlert(!soundAlert)}
+                >
+                  <View style={[styles.toggleThumb, soundAlert ? styles.thumbOn : styles.thumbOff]} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.divider} />
@@ -201,5 +259,78 @@ const styles = StyleSheet.create({
   logoutBtn: {
     borderColor: '#ef4444',
     marginTop: 10,
+  },
+  langRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  langBtn: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1.5,
+    borderColor: BORDER_COLOR,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  activeLangBtn: {
+    borderColor: GREEN,
+    backgroundColor: GREEN + '10',
+  },
+  langBtnTxt: {
+    fontSize: 13,
+    color: TEXT_LIGHT,
+    fontWeight: '600',
+  },
+  activeLangBtnTxt: {
+    color: GREEN,
+    fontWeight: 'bold',
+  },
+  settingToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+  },
+  settingToggleLabel: {
+    fontSize: 13,
+    color: TEXT_DARK,
+    fontWeight: '500',
+  },
+  toggleSwitch: {
+    width: 46,
+    height: 26,
+    borderRadius: 13,
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleOn: {
+    backgroundColor: GREEN,
+  },
+  toggleOff: {
+    backgroundColor: '#cbd5e1',
+  },
+  toggleThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#ffffff',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+  thumbOn: {
+    alignSelf: 'flex-end',
+  },
+  thumbOff: {
+    alignSelf: 'flex-start',
   },
 });

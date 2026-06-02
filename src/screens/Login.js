@@ -70,9 +70,11 @@ export default function Login({ navigation }) {
         idToken = await credential.user.getIdToken();
       }
       
+      const selectedRole = await AsyncStorage.getItem('user_role') || 'farmer';
       const res = await client.post('/verify-otp/', {
         id_token: idToken,
         phone: `+91${phone}`,
+        role: selectedRole,
       });
 
       const { token, new_user, user } = res.data;
@@ -83,10 +85,16 @@ export default function Login({ navigation }) {
       await AsyncStorage.setItem('user_role', user.role || 'farmer'); // fallback/default
 
       if (new_user || !user.name || !user.role) {
-        navigation.replace('Signup');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Signup' }],
+        });
       } else {
         await AsyncStorage.setItem('profile_setup', 'done');
-        navigation.replace(user.role === 'farmer' ? 'Farmer' : 'Buyer');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: user.role === 'farmer' ? 'Farmer' : 'Buyer' }],
+        });
       }
     } catch (e) {
       console.log('Verification error', e);

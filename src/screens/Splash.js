@@ -25,7 +25,11 @@ export default function Splash({ navigation }) {
             navigation.replace('Signup');
           }
         } else {
-          navigation.replace('Lang');
+          if (role) {
+            navigation.replace('Login');
+          } else {
+            navigation.replace('Lang');
+          }
         }
       } catch (e) {
         console.log('Error verifying auth credentials', e);

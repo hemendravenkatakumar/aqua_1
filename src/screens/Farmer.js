@@ -9,13 +9,19 @@ import Calc from '../tabs/Calc';
 import History from '../tabs/History';
 import AI from '../tabs/AI';
 import client from '../api/client';
-import { GREEN } from '../constants';
+import { GREEN, TRANSLATIONS } from '../constants';
 
 export default function Farmer({ navigation }) {
   const [tab, setTab] = useState('weight');
   const [user, setUser] = useState(null);
   const [profileVisible, setProfileVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState('en');
+
+  const loadLang = async () => {
+    const saved = await AsyncStorage.getItem('user_lang');
+    if (saved) setLang(saved);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -30,6 +36,7 @@ export default function Farmer({ navigation }) {
 
   useEffect(() => {
     fetchProfile();
+    loadLang();
   }, []);
 
   const handleLogout = async () => {
@@ -64,7 +71,8 @@ export default function Farmer({ navigation }) {
 
   const tabs = ['weight', 'calc', 'history', 'ai'];
   const icons = ['⚖️', '🧮', '📋', '🤖'];
-  const labels = ['Weight', 'Calculator', 'History', 'AquaAI'];
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const labels = [t.weight, t.calc, t.history, t.ai];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,7 +85,7 @@ export default function Farmer({ navigation }) {
       />
 
       <View style={styles.content}>
-        {tab === 'weight' && <Weight role="farmer" />}
+        {tab === 'weight' && <Weight role="farmer" lang={lang} />}
         {tab === 'calc' && <Calc />}
         {tab === 'history' && <History />}
         {tab === 'ai' && <AI />}
@@ -93,9 +101,15 @@ export default function Farmer({ navigation }) {
 
       <ProfileModal
         visible={profileVisible}
-        onClose={() => setProfileVisible(false)}
+        onClose={() => {
+          setProfileVisible(false);
+          loadLang();
+        }}
         user={user}
-        onSave={setUser}
+        onSave={(updatedUser) => {
+          setUser(updatedUser);
+          loadLang();
+        }}
         onLogout={handleLogout}
       />
     </SafeAreaView>

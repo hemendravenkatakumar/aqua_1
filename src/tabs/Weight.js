@@ -171,8 +171,11 @@ export default function Weight({ role, lang }) {
   // Dynamic stats calculation
   const totalBags = bags.length;
   const totalWeight = bags.reduce((acc, b) => acc + b.weight, 0);
+  const selectedFishBags = bags.filter(b => b.fish === fish).length;
   const selectedFishWeight = bags.filter(b => b.fish === fish).reduce((acc, b) => acc + b.weight, 0);
   const totalValue = bags.reduce((acc, b) => acc + b.weight * (b.price || 28.0), 0);
+
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
@@ -309,22 +312,22 @@ export default function Weight({ role, lang }) {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statVal}>{totalBags}</Text>
-            <Text style={styles.statLabel}>Total Bags</Text>
+            <Text style={styles.statLabel}>{t.totalBags}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statVal, { color: GREEN }]}>{totalWeight.toFixed(1)} kg</Text>
-            <Text style={styles.statLabel}>Total Weight</Text>
+            <Text style={[styles.statVal, { color: GREEN }]}>{selectedFishBags}</Text>
+            <Text style={styles.statLabel}>{FISH_NAMES[FISH_KEYS.indexOf(fish)]} {t.totalBags}</Text>
           </View>
         </View>
         
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={[styles.statVal, { color: GREEN }]}>{selectedFishWeight.toFixed(1)} kg</Text>
-            <Text style={styles.statLabel}>{FISH_NAMES[FISH_KEYS.indexOf(fish)]} Weight</Text>
+            <Text style={styles.statLabel}>{FISH_NAMES[FISH_KEYS.indexOf(fish)]} {t.totalWeight}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statVal, { color: '#b45309' }]}>₹{totalValue.toFixed(0)}</Text>
-            <Text style={styles.statLabel}>Total Value (Est)</Text>
+            <Text style={[styles.statVal, { color: GREEN }]}>{totalWeight.toFixed(1)} kg</Text>
+            <Text style={styles.statLabel}>{t.totalWeight}</Text>
           </View>
         </View>
       </View>

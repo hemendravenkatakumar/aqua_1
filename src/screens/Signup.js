@@ -41,7 +41,10 @@ export default function Signup({ navigation }) {
         {
           text: 'OK',
           onPress: () => {
-            navigation.replace(role === 'farmer' ? 'Farmer' : 'Buyer');
+            navigation.reset({
+              index: 0,
+              routes: [{ name: role === 'farmer' ? 'Farmer' : 'Buyer' }],
+            });
           },
         },
       ]);
