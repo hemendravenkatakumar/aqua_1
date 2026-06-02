@@ -14,6 +14,8 @@ export default function Weight({ role, lang }) {
   const [pulsing, setPulsing] = useState(false);
   const [flash, setFlash] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isBtConnected, setIsBtConnected] = useState(true);
+  const [btConnecting, setBtConnecting] = useState(false);
   
   // Stats
   const [stats, setStats] = useState({
@@ -25,6 +27,10 @@ export default function Weight({ role, lang }) {
 
   // Random weight simulator (Bluetooth active weight scale simulation)
   useEffect(() => {
+    if (!isBtConnected) {
+      setLiveKg(0.0);
+      return;
+    }
     const interval = setInterval(() => {
       const min = 15;
       const max = 38;
@@ -34,7 +40,16 @@ export default function Weight({ role, lang }) {
       setTimeout(() => setPulsing(false), 300);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isBtConnected]);
+
+  const handleConnectBt = () => {
+    setBtConnecting(true);
+    setTimeout(() => {
+      setIsBtConnected(true);
+      setBtConnecting(false);
+      setLiveKg(24.5);
+    }, 1500);
+  };
 
   // Fetch initial data
   const fetchData = async () => {
@@ -86,6 +101,10 @@ export default function Weight({ role, lang }) {
       Alert.alert('Warning', 'Please select a vehicle first!');
       return;
     }
+    if (!isBtConnected) {
+      Alert.alert('Warning', 'Please connect the Bluetooth scale first!');
+      return;
+    }
     
     try {
       setFlash(true);
@@ -130,9 +149,9 @@ export default function Weight({ role, lang }) {
       await client.post('/batches/', {
         name: batchName,
         fish: fish,
-        bags: stats.total_bags,
-        kg: stats.total_weight,
-        amt: stats.total_amount,
+        bags: totalBags,
+        kg: totalWeight,
+        amt: totalValue,
       });
       
       Alert.alert('Success', 'Batch session saved to history successfully!');
@@ -149,21 +168,54 @@ export default function Weight({ role, lang }) {
 
   const activeVehicle = vehicles.find(v => v.id === selVehId);
 
+  // Dynamic stats calculation
+  const totalBags = bags.length;
+  const totalWeight = bags.reduce((acc, b) => acc + b.weight, 0);
+  const selectedFishWeight = bags.filter(b => b.fish === fish).reduce((acc, b) => acc + b.weight, 0);
+  const totalValue = bags.reduce((acc, b) => acc + b.weight * (b.price || 28.0), 0);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       
       {/* Bluetooth scale card */}
-      <View style={styles.scaleCard}>
+      <View style={[styles.scaleCard, !isBtConnected && styles.scaleCardDisconnected]}>
         <View style={styles.cardHeader}>
-          <View style={styles.glowDot} />
-          <Text style={styles.cardHeaderTxt}>Bluetooth Connected (Scale Pro)</Text>
+          <View style={[styles.glowDot, { backgroundColor: isBtConnected ? '#34d399' : '#ef4444' }]} />
+          <Text style={styles.cardHeaderTxt}>
+            {isBtConnected ? 'Bluetooth Connected (Scale Pro)' : 'Bluetooth Disconnected'}
+          </Text>
         </View>
-        <Text style={styles.cardSub}>CURRENT BAG WEIGHT</Text>
-        <View style={[styles.weightContainer, pulsing && styles.pulsingWeight]}>
-          <Text style={styles.weightNum}>{liveKg}</Text>
-          <Text style={styles.weightUnit}>kg</Text>
-        </View>
-        <Text style={styles.scaleFooter}>⚖️ Active Scale Auto-Taring</Text>
+        
+        {isBtConnected ? (
+          <>
+            <Text style={styles.cardSub}>CURRENT BAG WEIGHT</Text>
+            <View style={[styles.weightContainer, pulsing && styles.pulsingWeight]}>
+              <Text style={styles.weightNum}>{liveKg}</Text>
+              <Text style={styles.weightUnit}>kg</Text>
+            </View>
+            <View style={styles.scaleCardActions}>
+              <Text style={styles.scaleFooter}>⚖️ Active Scale Auto-Taring</Text>
+              <TouchableOpacity onPress={() => setIsBtConnected(false)} style={styles.disconnectBtn}>
+                <Text style={styles.disconnectBtnTxt}>Disconnect</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <View style={styles.disconnectedContainer}>
+            <Text style={styles.disconnectedTxt}>No weighing scale connected.</Text>
+            <TouchableOpacity
+              style={styles.connectBtn}
+              onPress={handleConnectBt}
+              disabled={btConnecting}
+            >
+              {btConnecting ? (
+                <ActivityIndicator size="small" color={GREEN} />
+              ) : (
+                <Text style={styles.connectBtnTxt}>🔌 Connect Weight Scale</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Vehicle selector (Buyer only) */}
@@ -254,21 +306,26 @@ export default function Weight({ role, lang }) {
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        <View style={styles.statBox}>
-          <Text style={styles.statVal}>{stats.total_bags}</Text>
-          <Text style={styles.statLabel}>Total Bags</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statVal}>{totalBags}</Text>
+            <Text style={styles.statLabel}>Total Bags</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={[styles.statVal, { color: GREEN }]}>{totalWeight.toFixed(1)} kg</Text>
+            <Text style={styles.statLabel}>Total Weight</Text>
+          </View>
         </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statVal, { color: GREEN }]}>{stats.total_weight} kg</Text>
-          <Text style={styles.statLabel}>Total Weight</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statVal, { color: GREEN }]}>{stats.avg_weight} kg</Text>
-          <Text style={styles.statLabel}>Avg Bag Weight</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statVal, { color: '#b45309' }]}>₹{stats.total_amount}</Text>
-          <Text style={styles.statLabel}>Total Value (Est)</Text>
+        
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={[styles.statVal, { color: GREEN }]}>{selectedFishWeight.toFixed(1)} kg</Text>
+            <Text style={styles.statLabel}>{FISH_NAMES[FISH_KEYS.indexOf(fish)]} Weight</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={[styles.statVal, { color: '#b45309' }]}>₹{totalValue.toFixed(0)}</Text>
+            <Text style={styles.statLabel}>Total Value (Est)</Text>
+          </View>
         </View>
       </View>
 
@@ -283,14 +340,16 @@ export default function Weight({ role, lang }) {
       <TouchableOpacity
         style={[
           styles.actionBtn,
-          (role === 'buyer' && !selVehId) && styles.disabledBtn,
+          ((role === 'buyer' && !selVehId) || !isBtConnected) && styles.disabledBtn,
           flash && styles.flashBtn,
         ]}
         onPress={handleAddBag}
-        disabled={role === 'buyer' && !selVehId}
+        disabled={(role === 'buyer' && !selVehId) || !isBtConnected}
       >
         <Text style={styles.actionBtnTxt}>
-          {flash
+          {!isBtConnected
+            ? '🔌 Connect Scale to Add Bag'
+            : flash
             ? '✓ Bag Added!'
             : `+ Add Bag (${liveKg} kg) — ${FISH_NAMES[FISH_KEYS.indexOf(fish)]}`}
         </Text>
@@ -512,10 +571,12 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
     marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   statBox: {
     width: '48%',
@@ -524,12 +585,59 @@ const styles = StyleSheet.create({
     borderColor: BORDER_COLOR,
     borderRadius: 12,
     padding: 12,
-    margin: '1%',
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 1.5,
+  },
+  scaleCardDisconnected: {
+    backgroundColor: '#4b5563',
+    shadowColor: '#4b5563',
+  },
+  scaleCardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  disconnectBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  disconnectBtnTxt: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  disconnectedContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+  },
+  disconnectedTxt: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginBottom: 14,
+    fontWeight: '500',
+  },
+  connectBtn: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  connectBtnTxt: {
+    color: GREEN,
+    fontWeight: 'bold',
+    fontSize: 13,
   },
   statVal: {
     fontSize: 16,
