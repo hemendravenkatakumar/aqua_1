@@ -1,8 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Production Railway Backend URL
-const BASE_URL = 'https://aqua2-production.up.railway.app/api';
+// Production Render Backend URL (Works in India without DNS blocking)
+const BASE_URL = 'https://aqua2-backend.onrender.com/api';
 
 const client = axios.create({
   baseURL: BASE_URL,

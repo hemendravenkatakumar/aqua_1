@@ -1,114 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GREEN, GREEN_LIGHT, BORDER_COLOR, TEXT_DARK, TEXT_LIGHT, TRANSLATIONS } from '../constants';
 import Btn from '../comps/Btn';
-import client, { setBackendIP } from '../api/client';
-import auth from '../../firebase';
+import client from '../api/client';
 
-export default function Login({ navigation }) {
+export default function Login({ route, navigation }) {
   const [lang, setLang] = useState('en');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
+  const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
-  const [confirm, setConfirm] = useState(null);
-  const [role, setRole] = useState('farmer');
+  const { role: paramRole } = route.params || {};
+  const [role, setRole] = useState(paramRole || 'farmer');
 
   useEffect(() => {
     AsyncStorage.getItem('user_lang').then(savedLang => {
       if (savedLang) setLang(savedLang);
     });
-    AsyncStorage.getItem('user_role').then(savedRole => {
-      if (savedRole) setRole(savedRole);
-    });
-  }, []);
+    if (paramRole) {
+      setRole(paramRole);
+    } else {
+      AsyncStorage.getItem('user_role').then(savedRole => {
+        if (savedRole) setRole(savedRole);
+      });
+    }
+  }, [paramRole]);
 
-  const handleSendOTP = async () => {
+  const handleLogin = async () => {
     if (phone.length < 10) {
       Alert.alert('Invalid Number', 'Please enter a valid 10-digit mobile number.');
       return;
     }
-    
-    setLoading(true);
-    try {
-      
-      if (!auth) {
-        throw new Error("Native auth module not found in Expo Go");
-      }
-      
-      const formatPhone = `+91${phone}`;
-      // Trigger real SMS code via Firebase Native Auth
-      const confirmation = await auth().signInWithPhoneNumber(formatPhone);
-      setConfirm(confirmation);
-      setCodeSent(true);
-      Alert.alert('OTP Sent', `Verification code sent to +91 ${phone}.`);
-    } catch (e) {
-      console.log('Error triggering OTP', e);
-      // Fallback for sandboxed developer checks & Expo Go missing native module
-      setCodeSent(true);
-      Alert.alert(
-        'Simulated Mode (Expo Go)',
-        `Running in Expo Go (simulated SMS). Verification code set to: 123456`
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async () => {
-    if (otp.length < 6) {
-      Alert.alert('Invalid Code', 'Please enter the 6-digit OTP code.');
+    if (pin.length < 4) {
+      Alert.alert('Invalid PIN', 'Please enter a 4-6 digit Passcode/PIN.');
       return;
     }
 
     setLoading(true);
     try {
-      let idToken;
-      if (otp === '123456') {
-        // Dev bypass
-        idToken = `test-token-${otp}`;
-      } else {
-        // Real phone confirmation
-        const credential = await confirm.confirm(otp);
-        idToken = await credential.user.getIdToken();
-      }
-      
-      const selectedRole = await AsyncStorage.getItem('user_role') || 'farmer';
-      const res = await client.post('/verify-otp/', {
-        id_token: idToken,
+      const res = await client.post('/login/', {
         phone: `+91${phone}`,
-        role: selectedRole,
+        pin: pin,
       });
 
-      const { token, new_user, user } = res.data;
-      
+      const { token, user } = res.data;
+
       // Save credentials in local storage
       await AsyncStorage.setItem('auth_token', token);
       await AsyncStorage.setItem('user_phone', user.phone);
-      await AsyncStorage.setItem('user_role', user.role || 'farmer'); // fallback/default
+      await AsyncStorage.setItem('user_role', user.role || role || 'farmer');
+      await AsyncStorage.setItem('profile_setup', 'done');
 
-      if (new_user || !user.name || !user.role) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Signup' }],
-        });
-      } else {
-        await AsyncStorage.setItem('profile_setup', 'done');
-        navigation.reset({
-          index: 0,
-          routes: [{ name: user.role === 'farmer' ? 'Farmer' : 'Buyer' }],
-        });
+      if (user.lang) {
+        await AsyncStorage.setItem('user_lang', user.lang);
       }
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: (user.role || role) === 'farmer' ? 'Farmer' : 'Buyer' }],
+      });
     } catch (e) {
-      console.log('Verification error', e);
-      Alert.alert('Verification Failed', 'Invalid OTP code or Server connection refused. Please verify your Django Backend Server IP is correct and running.');
+      console.log('Login error', e);
+      const errMsg = e.response?.data?.error || 'Server connection refused. Please verify your Django Backend Server IP is correct and running.';
+      Alert.alert('Login Failed', errMsg);
     } finally {
       setLoading(false);
     }
   };
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  const isFarmer = role === 'farmer';
+  const themeColor = isFarmer ? GREEN : '#3b82f6';
+  const themeLightBg = isFarmer ? GREEN_LIGHT : '#eff6ff';
 
   return (
     <KeyboardAvoidingView
@@ -116,49 +79,49 @@ export default function Login({ navigation }) {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.topSection}>
-          <Text style={styles.emoji}>{role === 'farmer' ? '👨‍🌾' : '🚛'}</Text>
-          <Text style={styles.title}>{(role === 'farmer' ? t.farmer : t.buyer) + " " + t.login}</Text>
-          <Text style={styles.subtitle}>Firebase Secure Authentication</Text>
+        <View style={[styles.topSection, { backgroundColor: themeLightBg }]}>
+          <Text style={styles.emoji}>{isFarmer ? '👨‍🌾' : '🚛'}</Text>
+          <Text style={[styles.title, { color: themeColor }]}>
+            {(isFarmer ? t.farmer : t.buyer) + " " + t.loginOnly}
+          </Text>
+          <Text style={styles.subtitle}>Secure PIN Authentication</Text>
         </View>
 
         <View style={styles.form}>
-
-
-          {!codeSent ? (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t.enterPhone}</Text>
-              <View style={styles.phoneInputRow}>
-                <Text style={styles.prefix}>+91</Text>
-                <TextInput
-                  style={[styles.input, styles.phoneInput]}
-                  placeholder="98765 43210"
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  value={phone}
-                  onChangeText={setPhone}
-                />
-              </View>
-              <Btn title={t.sendOTP} onPress={handleSendOTP} loading={loading} style={styles.submitBtn} />
-            </View>
-          ) : (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t.enterOTP}</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t.enterPhone}</Text>
+            <View style={styles.phoneInputRow}>
+              <Text style={styles.prefix}>+91</Text>
               <TextInput
-                style={styles.input}
-                placeholder="123456"
-                keyboardType="number-pad"
-                maxLength={6}
-                value={otp}
-                onChangeText={setOtp}
+                style={[styles.input, styles.phoneInput]}
+                placeholder="98765 43210"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={phone}
+                onChangeText={setPhone}
               />
-              <Btn title={t.verifyOTP} onPress={handleVerifyOTP} loading={loading} style={styles.submitBtn} />
-              
-              <TouchableOpacity onPress={() => setCodeSent(false)} style={styles.changePhoneBtn}>
-                <Text style={styles.changePhoneText}>⬅ Change Phone Number</Text>
-              </TouchableOpacity>
             </View>
-          )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t.enterPin}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••"
+              keyboardType="number-pad"
+              secureTextEntry={true}
+              maxLength={6}
+              value={pin}
+              onChangeText={setPin}
+            />
+          </View>
+
+          <Btn
+            title={t.loginOnly}
+            onPress={handleLogin}
+            loading={loading}
+            style={[styles.submitBtn, { backgroundColor: themeColor }]}
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -177,7 +140,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 60,
     paddingBottom: 30,
-    backgroundColor: GREEN_LIGHT,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
@@ -188,7 +150,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: GREEN,
   },
   subtitle: {
     fontSize: 12,
@@ -240,21 +201,7 @@ const styles = StyleSheet.create({
     color: TEXT_DARK,
     backgroundColor: '#f8fafc',
   },
-  helperText: {
-    fontSize: 11,
-    color: TEXT_LIGHT,
-    marginTop: 4,
-  },
   submitBtn: {
     marginTop: 16,
-  },
-  changePhoneBtn: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  changePhoneText: {
-    fontSize: 13,
-    color: GREEN,
-    fontWeight: '600',
   },
 });

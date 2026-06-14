@@ -51,22 +51,27 @@ export default function Weight({ role, lang }) {
     }, 1500);
   };
 
-  // Fetch initial data
+  // Fetch initial data concurrently (Performance Optimization)
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch bags
-      const bagsRes = await client.get('/bags/');
-      setBags(bagsRes.data);
+      const promises = [
+        client.get('/bags/'),
+        client.get('/bags/stats/'),
+      ];
       
-      // Fetch stats
-      const statsRes = await client.get('/bags/stats/');
-      setStats(statsRes.data);
-      
-      // Fetch vehicles if buyer
       if (role === 'buyer') {
-        const vehRes = await client.get('/vehicles/');
-        setVehicles(vehRes.data.filter(v => v.status === 'active'));
+        // Retrieve only active vehicles directly from DB
+        promises.push(client.get('/vehicles/?status=active'));
+      }
+
+      const results = await Promise.all(promises);
+
+      setBags(results[0].data);
+      setStats(results[1].data);
+      
+      if (role === 'buyer' && results[2]) {
+        setVehicles(results[2].data);
       }
     } catch (e) {
       console.log('Error fetching bags data', e);
@@ -177,6 +182,17 @@ export default function Weight({ role, lang }) {
 
   const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
+  // Group active bags by fish type and calculate totals
+  const fishSummary = FISH_KEYS.map((k, idx) => {
+    const total = bags.filter(b => b.fish === k).reduce((acc, b) => acc + b.weight, 0);
+    return {
+      key: k,
+      name: FISH_NAMES[idx],
+      emoji: FISH_EMOJI[k],
+      weight: total
+    };
+  }).filter(item => item.weight > 0);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       
@@ -231,7 +247,13 @@ export default function Weight({ role, lang }) {
               return (
                 <TouchableOpacity
                   key={v.id}
-                  style={[styles.chip, isSelected && styles.activeChip]}
+                  style={[
+                    styles.chip,
+                    isSelected && {
+                      borderColor: '#3b82f6',
+                      backgroundColor: '#3b82f6',
+                    }
+                  ]}
                   onPress={() => setSelVehId(isSelected ? null : v.id)}
                 >
                   <Text style={[styles.chipText, isSelected && styles.activeChipText]}>
@@ -295,7 +317,13 @@ export default function Weight({ role, lang }) {
             return (
               <TouchableOpacity
                 key={k}
-                style={[styles.chip, isSelected && styles.activeChip]}
+                style={[
+                  styles.chip,
+                  isSelected && {
+                    borderColor: role === 'farmer' ? GREEN : '#3b82f6',
+                    backgroundColor: role === 'farmer' ? GREEN : '#3b82f6',
+                  }
+                ]}
                 onPress={() => setFish(k)}
               >
                 <Text style={[styles.chipText, isSelected && styles.activeChipText]}>
@@ -315,18 +343,18 @@ export default function Weight({ role, lang }) {
             <Text style={styles.statLabel}>{t.totalBags}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statVal, { color: GREEN }]}>{selectedFishBags}</Text>
+            <Text style={[styles.statVal, { color: role === 'farmer' ? GREEN : '#3b82f6' }]}>{selectedFishBags}</Text>
             <Text style={styles.statLabel}>{FISH_NAMES[FISH_KEYS.indexOf(fish)]} {t.totalBags}</Text>
           </View>
         </View>
         
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={[styles.statVal, { color: GREEN }]}>{selectedFishWeight.toFixed(1)} kg</Text>
+            <Text style={[styles.statVal, { color: role === 'farmer' ? GREEN : '#3b82f6' }]}>{selectedFishWeight.toFixed(1)} kg</Text>
             <Text style={styles.statLabel}>{FISH_NAMES[FISH_KEYS.indexOf(fish)]} {t.totalWeight}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statVal, { color: GREEN }]}>{totalWeight.toFixed(1)} kg</Text>
+            <Text style={[styles.statVal, { color: role === 'farmer' ? GREEN : '#3b82f6' }]}>{totalWeight.toFixed(1)} kg</Text>
             <Text style={styles.statLabel}>{t.totalWeight}</Text>
           </View>
         </View>
@@ -343,6 +371,10 @@ export default function Weight({ role, lang }) {
       <TouchableOpacity
         style={[
           styles.actionBtn,
+          {
+            backgroundColor: role === 'farmer' ? GREEN : '#3b82f6',
+            shadowColor: role === 'farmer' ? GREEN : '#3b82f6',
+          },
           ((role === 'buyer' && !selVehId) || !isBtConnected) && styles.disabledBtn,
           flash && styles.flashBtn,
         ]}
@@ -363,6 +395,26 @@ export default function Weight({ role, lang }) {
         <TouchableOpacity style={styles.saveBatchBtn} onPress={handleSaveBatch}>
           <Text style={styles.saveBatchBtnTxt}>💾 Save Session to History</Text>
         </TouchableOpacity>
+      )}
+
+      {/* Weight Summary by Fish Type Card */}
+      {bags.length > 0 && fishSummary.length > 0 && (
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>WEIGHT BY FISH TYPE</Text>
+          {fishSummary.map((item, idx) => (
+            <View key={item.key}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryFishName}>
+                  {item.emoji} {item.name}
+                </Text>
+                <Text style={styles.summaryFishWeight}>
+                  {item.weight.toFixed(1)} kg
+                </Text>
+              </View>
+              {idx < fishSummary.length - 1 && <View style={styles.summaryDivider} />}
+            </View>
+          ))}
+        </View>
       )}
 
       {/* Active Bags List */}
@@ -407,62 +459,74 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   scaleCard: {
-    backgroundColor: GREEN,
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#1e293b', // Slate control panel
+    borderRadius: 24,
+    padding: 22,
     marginBottom: 16,
-    elevation: 4,
-    shadowColor: GREEN,
+    elevation: 6,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#334155',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   glowDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#34d399',
-    marginRight: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
   },
   cardHeaderTxt: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#94a3b8',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   cardSub: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#64748b',
     fontSize: 10,
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   weightContainer: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#020617', // Pitch black display screen
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    marginVertical: 8,
+    borderWidth: 1.5,
+    borderColor: '#334155',
   },
   pulsingWeight: {
-    transform: [{ scale: 1.03 }],
+    borderColor: '#10b981',
   },
   weightNum: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#ffffff',
+    fontSize: 56,
+    fontWeight: 'bold',
+    color: '#10b981', // Neon green digital readout
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   weightUnit: {
-    fontSize: 20,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 6,
+    fontSize: 22,
+    color: '#10b981',
+    marginLeft: 8,
     fontWeight: 'bold',
+    opacity: 0.8,
   },
   scaleFooter: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#64748b',
     fontSize: 11,
-    marginTop: 6,
+    fontWeight: '600',
   },
   section: {
     marginBottom: 16,
@@ -482,13 +546,18 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1.5,
     borderColor: BORDER_COLOR,
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     backgroundColor: '#ffffff',
-    margin: 4,
+    margin: 5,
     flexDirection: 'row',
     alignItems: 'center',
+    elevation: 1.5,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   activeChip: {
     borderColor: GREEN,
@@ -502,6 +571,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 13,
     color: TEXT_DARK,
+    fontWeight: '500',
   },
   activeChipText: {
     color: '#ffffff',
@@ -584,73 +654,76 @@ const styles = StyleSheet.create({
   statBox: {
     width: '48%',
     backgroundColor: '#ffffff',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: BORDER_COLOR,
-    borderRadius: 12,
-    padding: 12,
-    elevation: 1,
+    borderRadius: 16,
+    padding: 14,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 1.5,
+    shadowRadius: 3,
   },
   scaleCardDisconnected: {
-    backgroundColor: '#4b5563',
-    shadowColor: '#4b5563',
+    backgroundColor: '#0f172a',
+    borderColor: '#1e293b',
   },
   scaleCardActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
   disconnectBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    backgroundColor: '#ef444420',
+    borderWidth: 1,
+    borderColor: '#ef444480',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
   },
   disconnectBtnTxt: {
-    color: '#ffffff',
+    color: '#f87171',
     fontSize: 11,
     fontWeight: 'bold',
   },
   disconnectedContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
   disconnectedTxt: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#94a3b8',
     fontSize: 14,
-    marginBottom: 14,
-    fontWeight: '500',
+    marginBottom: 16,
+    fontWeight: '600',
   },
   connectBtn: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: '#000',
+    backgroundColor: '#3b82f6',
+    paddingVertical: 12,
+    paddingHorizontal: 26,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   connectBtnTxt: {
-    color: GREEN,
+    color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
   },
   statVal: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: 'bold',
     color: TEXT_DARK,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: TEXT_LIGHT,
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '500',
   },
   warningBox: {
     backgroundColor: '#fffbeb',
@@ -666,17 +739,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionBtn: {
-    height: 52,
-    backgroundColor: GREEN,
-    borderRadius: 12,
+    height: 58,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: GREEN,
-    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 14,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: 5,
   },
   disabledBtn: {
     backgroundColor: '#e2e8f0',
@@ -768,5 +839,45 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     fontSize: 16,
+  },
+  summaryCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: BORDER_COLOR,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  summaryTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: TEXT_LIGHT,
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  summaryFishName: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  summaryFishWeight: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#2563eb', // bold blue text
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9', // subtle divider
   },
 });

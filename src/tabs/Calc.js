@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
-import { FISH_KEYS, FISH_NAMES, FISH_EMOJI, GREEN, GREEN_LIGHT, BORDER_COLOR, TEXT_DARK, TEXT_LIGHT } from '../constants';
+import { FISH_KEYS, FISH_NAMES, FISH_EMOJI, GREEN, GREEN_LIGHT, BORDER_COLOR, TEXT_DARK, TEXT_LIGHT, TRANSLATIONS } from '../constants';
 import Btn from '../comps/Btn';
 
-export default function Calc() {
+export default function Calc({ lang }) {
   const [items, setItems] = useState([{ type: 'rohu', gross: '', price: '' }]);
 
   const addItem = () => setItems(p => [...p, { type: 'catla', gross: '', price: '' }]);
@@ -22,13 +22,14 @@ export default function Calc() {
   };
 
   const grandTotal = items.reduce((sum, item) => sum + getCalculation(item).total, 0);
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>🧮 Deduction Calculator</Text>
+        <Text style={styles.headerTitle}>🧮 {t.deductionCalc}</Text>
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>5 kg / 100 kg deducted</Text>
+          <Text style={styles.badgeText}>{t.deductedRule}</Text>
         </View>
       </View>
 
@@ -37,10 +38,10 @@ export default function Calc() {
         return (
           <View key={index} style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Fish {index + 1}</Text>
+              <Text style={styles.cardTitle}>{t.fishLabel} {index + 1}</Text>
               {index > 0 && (
                 <TouchableOpacity onPress={() => remItem(index)} style={styles.removeBtn}>
-                  <Text style={styles.removeText}>Remove ×</Text>
+                  <Text style={styles.removeText}>{t.removeLabel} ×</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -63,9 +64,11 @@ export default function Calc() {
               })}
             </ScrollView>
 
+            <Text style={styles.inputLabel}>{t.grossWeightLabel || "Total Gross Weight (kg)"}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Total Gross Weight (kg)"
+              placeholder={t.grossWeightPlaceholder || "e.g. 150"}
+              placeholderTextColor="#94a3b8"
               keyboardType="numeric"
               value={item.gross}
               onChangeText={val => updItem(index, 'gross', val)}
@@ -88,9 +91,11 @@ export default function Calc() {
               </View>
             ) : null}
 
+            <Text style={styles.inputLabel}>{t.priceLabel || "Price per kg (₹)"}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Price per kg (₹)"
+              placeholder={t.pricePlaceholder || "e.g. 130"}
+              placeholderTextColor="#94a3b8"
               keyboardType="numeric"
               value={item.price}
               onChangeText={val => updItem(index, 'price', val)}
@@ -107,7 +112,7 @@ export default function Calc() {
       })}
 
       <TouchableOpacity style={styles.addBtn} onPress={addItem}>
-        <Text style={styles.addBtnTxt}>+ Add Another Fish</Text>
+        <Text style={styles.addBtnTxt}>{t.addAnotherFish}</Text>
       </TouchableOpacity>
 
       {items.length > 1 && grandTotal > 0 ? (
@@ -226,62 +231,73 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   input: {
-    height: 48,
-    borderWidth: 1,
+    height: 52,
+    borderWidth: 1.5,
     borderColor: BORDER_COLOR,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    marginBottom: 10,
-    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
+    color: TEXT_DARK,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: TEXT_DARK,
+    marginBottom: 6,
+    marginTop: 6,
   },
   breakdown: {
     backgroundColor: '#f8fafc',
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: BORDER_COLOR,
-    padding: 10,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 14,
   },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 2,
+    marginVertical: 4,
   },
   breakdownLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: TEXT_LIGHT,
+    fontWeight: '500',
   },
   breakdownVal: {
-    fontSize: 12,
+    fontSize: 13,
     color: TEXT_DARK,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   netRow: {
-    borderTopWidth: 1,
+    borderTopWidth: 1.5,
     borderTopColor: BORDER_COLOR,
-    paddingTop: 4,
-    marginTop: 4,
+    paddingTop: 8,
+    marginTop: 8,
   },
   resultStrip: {
-    backgroundColor: '#fef3c7',
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: '#e8f7ef',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
+    borderRadius: 14,
+    padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 6,
   },
   resultLabel: {
-    fontSize: 13,
-    color: '#92400e',
+    fontSize: 14,
+    color: '#065f46',
     fontWeight: 'bold',
   },
   resultVal: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#b45309',
+    fontSize: 18,
+    fontWeight: '900',
+    color: GREEN,
   },
   addBtn: {
     height: 46,

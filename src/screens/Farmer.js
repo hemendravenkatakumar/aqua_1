@@ -86,7 +86,7 @@ export default function Farmer({ navigation }) {
 
       <View style={styles.content}>
         {tab === 'weight' && <Weight role="farmer" lang={lang} />}
-        {tab === 'calc' && <Calc />}
+        {tab === 'calc' && <Calc lang={lang} />}
         {tab === 'history' && <History />}
         {tab === 'ai' && <AI />}
       </View>
