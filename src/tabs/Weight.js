@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
-import { FISH_KEYS, FISH_NAMES, FISH_EMOJI, GREEN, GREEN_LIGHT, BORDER_COLOR, TEXT_DARK, TEXT_LIGHT, TRANSLATIONS } from '../constants';
+import { FISH_KEYS, FISH_NAMES, FISH_EMOJI, GREEN, GREEN_DARK, GREEN_LIGHT, BORDER_COLOR, TEXT_DARK, TEXT_LIGHT, TRANSLATIONS } from '../constants';
 import client from '../api/client';
 
 export default function Weight({ role, lang }) {
@@ -517,17 +517,17 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   scaleCard: {
-    backgroundColor: '#1e293b', // Slate control panel
+    backgroundColor: GREEN, // Solid Green Theme
     borderRadius: 24,
     padding: 22,
     marginBottom: 16,
     elevation: 6,
-    shadowColor: '#000000',
+    shadowColor: GREEN,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: GREEN_DARK,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -541,13 +541,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   cardHeaderTxt: {
-    color: '#94a3b8',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   cardSub: {
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 10,
     letterSpacing: 1.5,
     fontWeight: 'bold',
@@ -557,32 +557,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#020617', // Pitch black display screen
+    backgroundColor: 'rgba(0, 0, 0, 0.25)', // Semi-transparent overlay
     borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 12,
     marginVertical: 8,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   pulsingWeight: {
-    borderColor: '#10b981',
+    borderColor: '#ffffff',
   },
   weightNum: {
     fontSize: 56,
     fontWeight: 'bold',
-    color: '#10b981', // Neon green digital readout
+    color: '#ffffff', // Clean white digital layout
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   weightUnit: {
     fontSize: 22,
-    color: '#10b981',
+    color: 'rgba(255, 255, 255, 0.9)',
     marginLeft: 8,
     fontWeight: 'bold',
     opacity: 0.8,
   },
   scaleFooter: {
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -723,8 +723,8 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   scaleCardDisconnected: {
-    backgroundColor: '#0f172a',
-    borderColor: '#1e293b',
+    backgroundColor: '#64748b', // Muted slate gray when disconnected
+    borderColor: '#475569',
   },
   scaleCardActions: {
     flexDirection: 'row',
@@ -733,15 +733,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   disconnectBtn: {
-    backgroundColor: '#ef444420',
-    borderWidth: 1,
-    borderColor: '#ef444480',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
   disconnectBtnTxt: {
-    color: '#f87171',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -751,24 +749,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   disconnectedTxt: {
-    color: '#94a3b8',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 14,
     marginBottom: 16,
     fontWeight: '600',
   },
   connectBtn: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 26,
     borderRadius: 12,
     elevation: 3,
-    shadowColor: '#3b82f6',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   connectBtnTxt: {
-    color: '#ffffff',
+    color: GREEN,
     fontWeight: 'bold',
     fontSize: 14,
   },
