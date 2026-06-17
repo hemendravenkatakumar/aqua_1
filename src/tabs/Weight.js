@@ -124,8 +124,34 @@ export default function Weight({ role, lang }) {
       // Flash UI effect
       setTimeout(() => setFlash(false), 500);
       
-      // Refresh statistics and list
-      fetchData();
+      // Update local state instantly instead of fetching everything again from network
+      const newBag = res.data;
+      setBags(prev => [newBag, ...prev]);
+      
+      setStats(prev => {
+        const newTotalBags = prev.total_bags + 1;
+        const newTotalWeight = prev.total_weight + liveKg;
+        const newTotalAmount = prev.total_amount + (liveKg * price);
+        return {
+          total_bags: newTotalBags,
+          total_weight: +newTotalWeight.toFixed(2),
+          avg_weight: +(newTotalWeight / newTotalBags).toFixed(2),
+          total_amount: +newTotalAmount.toFixed(2),
+        };
+      });
+
+      if (role === 'buyer' && selVehId) {
+        setVehicles(prev => prev.map(v => {
+          if (v.id === selVehId) {
+            return {
+              ...v,
+              bags: (v.bags || 0) + 1,
+              kg: +((v.kg || 0.0) + liveKg).toFixed(2)
+            };
+          }
+          return v;
+        }));
+      }
     } catch (e) {
       setFlash(false);
       console.log('Error adding bag', e);
@@ -134,12 +160,44 @@ export default function Weight({ role, lang }) {
   };
 
   const handleDeleteBag = async (id) => {
+    const bagToDelete = bags.find(b => b.id === id);
+    if (!bagToDelete) return;
+
     try {
+      // Optimistically update local states
+      setBags(prev => prev.filter(b => b.id !== id));
+      
+      setStats(prev => {
+        const newTotalBags = Math.max(0, prev.total_bags - 1);
+        const newTotalWeight = Math.max(0.0, prev.total_weight - bagToDelete.weight);
+        const newTotalAmount = Math.max(0.0, prev.total_amount - (bagToDelete.weight * (bagToDelete.price || 28.0)));
+        return {
+          total_bags: newTotalBags,
+          total_weight: +newTotalWeight.toFixed(2),
+          avg_weight: newTotalBags > 0 ? +(newTotalWeight / newTotalBags).toFixed(2) : 0.0,
+          total_amount: +newTotalAmount.toFixed(2),
+        };
+      });
+
+      if (role === 'buyer' && bagToDelete.veh_id) {
+        setVehicles(prev => prev.map(v => {
+          if (v.id === bagToDelete.veh_id) {
+            return {
+              ...v,
+              bags: Math.max(0, (v.bags || 0) - 1),
+              kg: Math.max(0.0, +((v.kg || 0.0) - bagToDelete.weight).toFixed(2))
+            };
+          }
+          return v;
+        }));
+      }
+
       await client.delete(`/bags/${id}/`);
-      fetchData();
     } catch (e) {
       console.log('Error deleting bag', e);
       Alert.alert('Error', 'Failed to delete bag.');
+      // Re-fetch to recover consistent state
+      fetchData();
     }
   };
 
