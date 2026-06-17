@@ -17,6 +17,12 @@
     },
     "android": {
       "package": "com.aquasetu.app"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f17fec76-fcaa-40fe-9d3e-c6ebfdecb110"
+      }
+    },
+    "owner": "hemendra1"
   }
 }
