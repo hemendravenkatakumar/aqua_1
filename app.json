@@ -17,7 +17,6 @@
     },
     "android": {
       "package": "com.aquasetu.app"
-    },
-    "owner": "hemendra3"
+    }
   }
 }
