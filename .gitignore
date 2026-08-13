@@ -5,3 +5,5 @@ google-services.json
 .DS_Store
 android/
 ios/
+dist/
+web-build/

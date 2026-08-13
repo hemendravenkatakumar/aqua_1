@@ -6,7 +6,7 @@ const BASE_URL = 'https://aqua2-backend.onrender.com/api';
 
 const client = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 90000,
 });
 
 // Request interceptor to attach JWT Token
